@@ -1,0 +1,105 @@
+$f_AdminCommon
+";
+echo "<script>
+function orderCur(i){
+var warn = 0;
+	var CDate = $('form[name=ordercdek'+i+'] input[name=CDate]');
+	var Ctimebeg = $('form[name=ordercdek'+i+'] input[name=Ctimebeg]');
+	var Ctimeend = $('form[name=ordercdek'+i+'] input[name=Ctimeend]');
+	
+	if(CDate.val()==''){
+		CDate.addClass('warn'); warn = 1;
+	} else {
+		CDate.removeClass('warn');
+	}
+	if(Ctimebeg.val()==''){
+		Ctimebeg.addClass('warn'); warn = 1;
+	} else {
+		Ctimebeg.removeClass('warn');
+	}
+	if(Ctimeend.val()==''){
+		Ctimeend.addClass('warn'); warn = 1;
+	} else {
+		Ctimeend.removeClass('warn');
+	}
+	if(warn){ 
+		return false;
+	} else {
+		return true;	
+	}
+}
+</script>";
+$result.="
+
+
+";
+echo("<div class='el-order'><div class='o-box-flex'><div class='td-o'><strong>Дата заказа:</strong> ".date("d.m.Y H:i", (strtotime("".$f_Created_day.".".$f_Created_month.".".$f_Created_year." ".$f_Created_hours.":".$f_Created_minutes.":00") - 3600))."<br/>
+<strong>Имя:</strong> ".$f_Name."<br/>
+<strong>Телефон:</strong> ".$f_Phone."<br/>
+<strong>Email:</strong> ".$f_Email."<br/>
+<strong>Адрес:</strong> ".$f_Address."".$f_Dostavka."".($f_Courier ? " (курьер)" : "")." ".$f_chosenCity."".($f_addresPost ? ", $f_addresPost" : "")."".($f_Street ? ", ул. $f_Street" : "")."".($f_Home ? ", д. $f_Home" : "")."".($f_Kvartira ? ", кв. $f_Kvartira" : "")."".($f_Podezd ? ", подъезд $f_Podezd" : "")."".($f_Domofon ? ", домофон $f_Domofon" : "")."<br/>
+".($f_pricePost ? "<strong>Цена доставки СДЭК:</strong> ".$f_pricePost." руб.<br/>" : "")."
+<strong>Комментарий:</strong> ".$f_Comments."</div>
+".($f_Courier || $f_chosenPost ? "<div class='td-o'>
+<form name='ordercdek".$f_RowID."' action='/cdek/' method='post'".($f_Courier ? " onSubmit='return orderCur($f_RowID)'" : "")." target='_blank'>
+        	<input name='Info_ID' type='hidden' value='$f_RowID'>
+            <input name='Item' type='hidden' value='$f_Item'>
+            <input name='ItemK' type='hidden' value='$f_ItemK'>
+            <input name='Phone' type='hidden' value='$f_Phone'>
+            <input name='chosenCityID' type='hidden' value='$f_chosenCityID'>
+            <input name='Email' type='hidden' value='$f_Email'>
+            <input name='Name' type='hidden' value='$f_Name'>
+            <input name='tarif' type='hidden' value='$f_tarif'>
+            <input name='chosenPost' type='hidden' value='$f_chosenPost'>
+            <input name='chosenCity' type='hidden' value='$f_chosenCity'>
+            <input name='Street' type='hidden' value='$f_Street'>
+            <input name='Home' type='hidden' value='$f_Home'>
+            <input name='kvartira' type='hidden' value='$f_kvartira'>
+            <input name='Podezd' type='hidden' value='$f_Podezd'>
+            <input name='Domofon' type='hidden' value='$f_Domofon'>
+            ".if_then($f_StatusSDEK_id==1 && $f_Courier, "<div class='del'><a href='/cdek/?del=$f_RowID' target='_blank' title='Удалить из СДЭК'><img src='/images/close2.png' /></a></div>")."
+            ".($f_Courier ? "<label>Дата ожидания курьера</label><input name='CDate' type='date' value='$f_CDate_year-$f_CDate_month-$f_CDate_day'>
+            <label>Коментарий для курьера</label><input name='CCom' type='text' value='$f_CCom'>
+            <label>Время начала ожидания курьера</label><input name='Ctimebeg' type='time' value='$f_Ctimebeg'>
+            <label>Время окончания ожидания курьера</label><input name='Ctimeend' type='time' value='$f_Ctimeend'><br />" : "")."
+            <div class='box-flex-c'><input type='submit' value='Отправить в СДЭК'>".($f_DispatchNumber && $f_StatusSDEK_id!=3 ? "<div class='green'>№ транзакции: ".$f_DispatchNumber."</div>" : "")."<div class='status".($f_StatusSDEK_id==3 ? " red" : "")."'>$f_StatusSDEK</div>".if_then($f_StatusSDEK_id==1 && !$f_Courier, "<div class='del2'><a href='/cdek/?del=$f_RowID' target='_blank' title='Удалить из СДЭК'><img src='/images/close2.png' /></a></div>")."</div>            
+            </div>" : "")."
+        </form></div><div class='o-box-flex-s2'>");
+
+$order_arr = explode(";", substr($f_Item,1));
+$orderK_arr = explode(";", substr($f_ItemK,1));
+$sum = 0;
+
+for($i = 0; $i < count($order_arr); $i++)
+{
+    $order_info = explode(":", $order_arr[$i]);
+    $order_id = $order_info[0];
+    $order_count = $orderK_arr[$i];
+    $order_price = $order_info[2];
+    
+    $sum = $sum + $order_count * $order_price;
+
+    $product_info = doQuery("SELECT i.Name as Name, i.Artikul, l.Sys_Name as Sys_Name, l.File_Path as File_Path, i.Description as Description FROM Info_".$order_info[1]." as i LEFT JOIN LinkedFiles as l ON (i.Info_ID = l.Info_ID) WHERE (i.Info_ID = '".$order_id."') AND (l.Field_ID = 1258)", "\$data[Name];;\$data[Sys_Name];;\$data[File_Path];;\$data[Description];;\$data[Artikul]");
+    $product_arr = explode(";;", $product_info);
+
+    $product_name = $product_arr[0];
+    $product_link = "/ext_images".$product_arr[2]."$product_arr[1]";
+    $product_description = $product_arr[3];
+
+	echo("
+    <div class='el-tov o-box-flex-s'>
+	    <div class='el-tov-img'><img src='".$product_link."' /></div>
+	    <div class='el-tov-info'>
+        	<div class='el-tov-id'>ID: ".$order_info[0]." Артикул: ".$product_arr[4]."</div>
+        	<div class='el-tov-name'>".$product_name."</div>
+            <div class='el-tov-des'>Размер: ".$order_info[3]."</div>
+            <div class='el-tov-pr'>Кол.: ".$order_count."</div>
+            <div class='el-tov-pr'>Цена ед.: ".$order_price." (сумма: ".($order_price * $order_count).")</div>
+        </div>
+	</div>");
+}
+
+echo("</div><div class='el-order-sum'>Итого: <span>$sum</span> руб.</div>");
+
+echo($f_AdminButtons."</div>");
+$result.="
